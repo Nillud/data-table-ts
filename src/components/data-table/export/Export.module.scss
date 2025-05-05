@@ -1,0 +1,34 @@
+.buttonExport {
+    border: 1px solid #fefefe;
+    background: #3a6cbf;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 8px 12px;
+    transition: all .3s ease-in-out;
+
+    &.Word {
+        background: #3a6cbf;
+
+        &:hover,
+        &:focus,
+        &:active {
+            background-color: #fff;
+            border: 1px solid #3a6cbf;
+            color: #3a6cbf;
+        }
+    }
+
+    &.Excel {
+        background: #48ae78;
+
+        &:hover,
+        &:focus,
+        &:active {
+            background-color: #fff;
+            border: 1px solid #48ae78;
+            color: #48ae78;
+        }
+    }
+}
