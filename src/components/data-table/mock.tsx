@@ -1,7 +1,7 @@
-import { column, tableData } from "./DataTable.types"
+import { Column, TableData } from "./DataTable.types"
 import PenEdit from "./img/PenEdit"
 
-const columns: Array<column> = [
+const columns: Array<Column> = [
     {
         field: "id",
         title: "ID",
@@ -50,7 +50,7 @@ const columns: Array<column> = [
     },
 ]
 
-const data: tableData = [
+const data: TableData = [
     {
         id: '1346724',
         name: 'Иван Петров',

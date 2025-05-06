@@ -1,29 +1,56 @@
 import React from 'react'
-import { column, localStorageData, localStorageSort } from './DataTable.types'
+import { Column as ColumnType, LocalStorageData, LocalStorageSort, TableProps } from './DataTable.types'
 import Column from './Column'
 
 type Props = {
-  columns: Array<column>
-  tableName: string
-  sortBy: localStorageSort
-  getSortField: (element: localStorageSort) => void
-  getFilters: (element: localStorageData) => void
-  filters: localStorageData
+  columns: Array<ColumnType>
+  sortBy: LocalStorageSort
+  getSortField: (element: LocalStorageSort) => void
+  getFilters: (element: LocalStorageData) => void
+  filters: LocalStorageData
   widths?: string
+  headerGroup: TableProps['headerGroup']
   [key: string]: unknown
 }
 
-const Header = ({ columns, tableName, getSortField, getFilters, filters, widths }: Props) => {
+const Header = ({ columns, getSortField, sortBy, getFilters, filters, widths, headerGroup }: Props) => {
+  const renderHeaderGroup = () => (
+    headerGroup && (
+      <div className={"table-columns"} style={{ gridTemplateColumns: widths || 'auto' }}>
+        {headerGroup.map((col, id) => (
+          <div key={`header-group-${id}`} className={'column'} style={{ gridColumn: `span ${col.cols || 1}` }}>
+            <div className="column-head">
+              <span>{col.title}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  )
+
+  const renderColumns = () => (
+    columns && columns.length > 0
+      ? columns.map((column, id) => (
+        <Column
+          key={`column-${id}`}
+          column={column}
+          getSortField={getSortField}
+          sortBy={sortBy}
+          getFilters={getFilters}
+          filters={filters}
+        />
+      ))
+      : <div className={'data-error'}>Ошибка: columns is undefined</div>
+  )
   return (
-    <div className={"table-columns"} style={{ gridTemplateColumns: widths }}>
-      {typeof columns !== 'undefined'
-        ? columns.map((column, id) => (
-          <Column key={`column-${id}`} column={column} tableName={tableName} getSortField={getSortField} getFilters={getFilters} filters={filters} />
-        ))
-        : <div className={'data-error'}>Ошибка: columns is undefined</div>
-      }
-    </div>
+    <>
+      {renderHeaderGroup()}
+      
+      <div className={"table-columns"} style={{ gridTemplateColumns: widths || 'auto' }}>
+        {renderColumns()}
+      </div>
+    </>
   )
 }
 
-export default Header
+export default React.memo(Header)

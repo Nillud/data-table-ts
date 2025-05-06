@@ -1,16 +1,16 @@
-import { paginationPage, paginationSize, tableData, TableProps } from './DataTable.types';
+import { PaginationPage, PaginationSize, TableData, TableProps } from './DataTable.types';
 import NextIcon from './img/NextIcon';
 import LastIcon from './img/LastIcon';
 import PrevIcon from './img/PrevIcon';
 import FirstIcon from './img/FirstIcon';
 
 type Props = {
-  tableData: tableData;
+  tableData: TableData;
   paginationCounts: TableProps["paginationCounts"];
-  paginationSize: paginationSize;
-  getPaginationSize: (size: paginationSize) => void;
-  paginationPage: paginationPage;
-  getPaginationPage: (page: paginationPage) => void;
+  paginationSize: PaginationSize;
+  getPaginationSize: (size: PaginationSize) => void;
+  paginationPage: PaginationPage;
+  getPaginationPage: (page: PaginationPage) => void;
 };
 
 const TableFooter = ({
@@ -23,6 +23,8 @@ const TableFooter = ({
 }: Props) => {
   const totalItems = tableData.length;
   const totalPages = paginationSize === 0 ? 1 : Math.ceil(totalItems / paginationSize);
+
+  if (totalItems === 0) return null;
 
   const handleCountChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     getPaginationSize(Number(e.target.value));
@@ -86,8 +88,6 @@ const TableFooter = ({
 
   const firstItem = paginationSize === 0 ? 1 : paginationPage * paginationSize + 1;
   const lastItem = paginationSize === 0 ? totalItems : Math.min((paginationPage + 1) * paginationSize, totalItems);
-
-  if (totalItems === 0) return null;
 
   return (
     <div className="table-footer">

@@ -1,14 +1,14 @@
 import { ReactElement } from "react"
 import WordExport from "./export/WordExport"
 import ExportExcel from "./export/ExportExcel"
-import { column, tableData, TableProps } from "./DataTable.types"
+import { Column, TableData, TableProps } from "./DataTable.types"
 
 type Props = {
     wordBtn: boolean
     excelBtn: boolean
     downloadSectionLeftSideContent: ReactElement | null
-    tableData: tableData
-    columns: Array<column>
+    tableData: TableData
+    columns: Array<Column>
     tableName: string
     exportCustomColumns: TableProps['exportCustomColumns']
 }

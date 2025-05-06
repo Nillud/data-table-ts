@@ -1,28 +1,34 @@
-import { column, tableElement } from './DataTable.types'
+import { Column, TableElement, TableProps } from './DataTable.types'
 
 type Props = {
-    row: tableElement
-    column: column
+    row: TableElement
+    column: Column
     rowId: number
-    [key: string]: unknown
+    isTitles: TableProps['isTitles']
 }
 
-const Cell = ({ row, column, rowId }: Props) => {
-    const CellValue = () => {
-        if (column.formatter) {
-            return column.formatter(String(row[column.field]), row)
-        }
+const Cell = ({
+    row,
+    column,
+    rowId,
+    isTitles
+}: Props) => {
+    const rawValue = row[column.field]
 
-        if (typeof column.autoinc !== 'undefined') {
-            return <div className='row-item'>{rowId + 1}</div>
-        }
+    const stringValue = typeof rawValue !== 'undefined' && rawValue !== null ? String(rawValue) : ''
 
-        return <span>{row[column.field]}</span>
-    }
+    const content = column.formatter
+        ? column.formatter(stringValue, row)
+        : typeof column.autoinc !== 'undefined'
+            ? <span>{rowId + 1}</span>
+            : <span>{stringValue}</span>
 
     return (
-        <div className='cell'>
-            <CellValue />
+        <div
+            className='cell'
+            title={isTitles && stringValue ? stringValue : ''}
+        >
+            {content}
         </div>
     )
 }

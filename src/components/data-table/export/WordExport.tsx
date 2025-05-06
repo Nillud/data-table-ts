@@ -1,21 +1,23 @@
 import styles from './Export.module.scss'
-import { AlignmentType, Document, Packer, 
+import {
+    AlignmentType, Document, Packer,
     // PageOrientation, 
-    Paragraph, Table, TableCell, TableRow, TextRun, VerticalAlign, WidthType } from "docx"
+    Paragraph, Table, TableCell, TableRow, TextRun, VerticalAlign, WidthType
+} from "docx"
 import { saveAs } from "file-saver"
-import { column, tableData, tableElement, TableProps } from '../DataTable.types'
+import { Column, TableData, TableElement, TableProps } from '../DataTable.types'
 
 type Props = {
-    wordData: tableData
-    columns: Array<column>
+    wordData: TableData
+    columns: Array<Column>
     title: string
     exportCustomColumns?: TableProps["exportCustomColumns"]
 }
 
-const WordExport = ({ 
-    wordData, 
-    columns, 
-    title, 
+const WordExport = ({
+    wordData,
+    columns,
+    title,
     // exportCustomColumns 
 }: Props) => {
     const createNewWord = async () => {
@@ -42,18 +44,22 @@ const WordExport = ({
             ],
         })
 
-        const tableRows = wordData.map((element: tableElement) => {
+        const tableRows = wordData.map((element: TableElement) => {
             const tableRow: Array<TableCell> = []
 
             columns.forEach(col => {
+                const cellValue = typeof element[col.field] !== 'undefined' ? element[col.field] : '';
+
+                const textValue = typeof col.exportCustomCell !== 'undefined'
+                    ? col.exportCustomCell(String(cellValue), element)
+                    : String(cellValue); // Явное преобразование в строку
+
                 const tableCell: TableCell = new TableCell({
                     children: [
                         new Paragraph({
                             children: [
                                 new TextRun({
-                                    text: typeof col.exportCustomCell !== 'undefined'
-                                        ? col.exportCustomCell(String(element[col.field]), element)
-                                        : `${element[col.field]}`,
+                                    text: textValue,
                                     size: 22,
                                 })
                             ],

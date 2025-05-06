@@ -209,3 +209,15 @@
     font-weight: bold;
     text-align: center;
 }
+
+.group-header {
+    font-weight: bold;
+    padding: 8px 12px;
+    background: #f0f0f0;
+    cursor: pointer;
+    border-bottom: 1px solid #ddd;
+}
+
+.group-header:hover {
+    background: #e0e0e0;
+}

@@ -2,14 +2,14 @@
 
 // import { fetchTasks } from "@/app/actions/fetchTasks";
 import DataTable from "@/components/data-table/DataTable";
-import { column, tableData } from "@/components/data-table/DataTable.types";
+import { Column, TableData } from "@/components/data-table/DataTable.types";
 import { useEffect, useState } from "react";
 import { columns, data } from "@/components/data-table/mock";
 
 const DataTableMain = () => {
-    const [tableData, setTableData] = useState<tableData>([])
+    const [tableData, setTableData] = useState<TableData>([])
 
-    // const columns: Array<column> = [
+    // const columns: Array<Column> = [
     //     {
     //         field: 'dr_id',
     //         title: '№',
@@ -58,6 +58,9 @@ const DataTableMain = () => {
                     paginationCounts={[10, 20, 30, 40, 50, 0]}
                     excelBtn
                     wordBtn
+                    headerGroup={[{ title: 'Личные данные', cols: 4 }, { title: 'Оборудование', cols: 2 }]}
+                    groupBy={'status'}
+                    isTitles
                 // scrollable
                 // scrollHeight={250}
                 />

@@ -1,17 +1,19 @@
-import { useEffect, useState, useCallback } from 'react'
-import { localStorageData, localStorageSort, paginationPage, paginationSize, tableData, TableProps } from './DataTable.types'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { LocalStorageData, LocalStorageSort, PaginationPage, PaginationSize, TableProps } from './DataTable.types'
 import TableHeader from './TableHeader'
 import TableBody from './TableBody'
 import TableFooter from './TableFooter'
 import TableLoading from './table-loading/TableLoading'
 import { filterData, sortData } from './functions/sort-data'
 import ExportSection from './ExportSection'
+import { useDebouncedEffect } from './utils/useDebouncedEffect'
 
 const DataTable = ({
     tableData,
     columns,
     tableName = 'table-data',
     loading = false,
+    loadingElement = null,
     isFooter = false,
     paginationCounts = null,
     scrollable = false,
@@ -19,84 +21,73 @@ const DataTable = ({
     exportCustomColumns = null,
     excelBtn = false,
     wordBtn = false,
-    downloadSectionLeftSideContent = null
+    downloadSectionLeftSideContent = null,
+    headerGroup = null,
+    groupBy = null,
+    isTitles = false
 }: TableProps) => {
-    const [processedData, setProcessedData] = useState<tableData>([])
-    const [displayData, setDisplayData] = useState<tableData>([])
-    const [widths, setWidths] = useState<string>('1fr')
+    const [filters, setFilters] = useState<LocalStorageData>({})
+    const [sortBy, setSortBy] = useState<LocalStorageSort>({ col: '', type: 'asc' })
 
-    const [filters, setFilters] = useState<localStorageData>({})
-    const [sortBy, setSortBy] = useState<localStorageSort>({ col: '', type: 'asc' })
+    const [paginationSize, setPaginationSize] = useState<PaginationSize>(paginationCounts?.[0] || 10)
+    const [paginationPage, setPaginationPage] = useState<PaginationPage>(0)
 
-    const [paginationSize, setPaginationSize] = useState<paginationSize>(paginationCounts?.[0] || 10)
-    const [paginationPage, setPaginationPage] = useState<paginationPage>(0)
+    const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
 
-    useEffect(() => {
-        const loadFromLocalStorage = () => {
-            try {
-                const localSorter = localStorage.getItem(`${tableName}-sort-by`)
-                if (localSorter) {
-                    setSortBy(JSON.parse(localSorter))
-                }
+    const toggleGroup = (groupKey: string) => {
+        setCollapsedGroups(prev => ({
+            ...prev,
+            [groupKey]: !prev[groupKey],
+        }))
+    }
 
-                const localFilters = localStorage.getItem(`${tableName}-filters`)
-                if (localFilters) {
-                    setFilters(JSON.parse(localFilters))
-                }
+    // const [widths, setWidths] = useState<string>('1fr')
 
-                const localCounts = localStorage.getItem(`${tableName}-counts`)
-                if (localCounts) {
-                    setPaginationSize(localCounts === 'all' ? 0 : Number(localCounts))
-                }
+    const widths = useMemo(() => {
+        return columns.map(c => c.width ? `${c.width}px` : '1fr').join(' ')
+    }, [columns])
 
-                const localPage = localStorage.getItem(`${tableName}-page`)
-                if (localPage) {
-                    setPaginationPage(Number(localPage))
-                }
-            } catch (error) {
-                console.error('Error parsing localStorage data:', error)
-                resetToDefaults()
-            }
-        }
-
-        const resetToDefaults = () => {
+    const loadFromLocalStorage = useCallback(() => {
+        try {
+            const s = localStorage.getItem(`${tableName}-sort-by`)
+            const f = localStorage.getItem(`${tableName}-filters`)
+            const c = localStorage.getItem(`${tableName}-counts`)
+            const p = localStorage.getItem(`${tableName}-page`)
+            if (s) setSortBy(JSON.parse(s))
+            if (f) setFilters(JSON.parse(f))
+            if (c) setPaginationSize(c === 'all' ? 0 : Number(c))
+            if (p) setPaginationPage(Number(p))
+        } catch (e) {
+            console.error('Error parsing localStorage data:', e)
             setSortBy({ col: '', type: 'asc' })
             setFilters({})
             setPaginationSize(paginationCounts?.[0] || 10)
             setPaginationPage(0)
         }
+    }, [tableName, paginationCounts])
 
-        loadFromLocalStorage()
-    }, [tableName])
-
-    // Расчет ширины колонок
     useEffect(() => {
-        if (columns?.length) {
-            setWidths(columns.map(c => c.width ? `${c.width}px` : '1fr').join(' '))
-        }
-    }, [columns])
+        loadFromLocalStorage()
+    }, [loadFromLocalStorage])
 
-    // Обработка данных (фильтрация и сортировка)
-    const processData = useCallback(() => {
+    // Обработка данных (фильтрация + сортировка)
+    const processedData = useMemo(() => {
         let result = [...tableData]
 
-        // Применяем фильтрацию
-        if (filters) {
-            for (const filter in filters) {
-                const currentColumn = columns.find(col => col.field === filter)
-                const filterValue = String(filters[filter])
+        const columnMap = new Map(columns.map(col => [col.field, col]))
 
-                if (filterValue === '') continue
+        for (const field in filters) {
+            const filterValue = String(filters[field])
+            if (filterValue === '') continue
 
-                if (currentColumn?.headerFilter) {
-                    result = result.filter(element => currentColumn.headerFilter!(filterValue, String(element[filter])))
-                } else {
-                    result = filterData(result, filter, filterValue)
-                }
-            }
+            const column = columnMap.get(field)
+            if (!column) continue
+
+            result = column.headerFilter
+                ? result.filter(e => column.headerFilter!(filterValue, String(e[field])))
+                : filterData(result, field, filterValue)
         }
 
-        // Применяем сортировку
         if (sortBy.col) {
             result = sortData(result, sortBy.col, sortBy.type)
         }
@@ -104,32 +95,28 @@ const DataTable = ({
         return result
     }, [tableData, filters, sortBy, columns])
 
-    // Обновление processedData при изменении фильтров/сортировки
+    // Пагинация
+    const displayData = useMemo(() => {
+        if (paginationSize === 0) return processedData
+        const start = paginationPage * paginationSize
+        return processedData.slice(start, start + paginationSize)
+    }, [processedData, paginationPage, paginationSize])
+
+    // Сброс страницы при изменении фильтров/сортировки
     useEffect(() => {
-        setProcessedData(processData())
-        // Сбрасываем на первую страницу при изменении фильтров/сортировки
         setPaginationPage(0)
-    }, [processData])
+    }, [filters, sortBy])
 
-    // Пагинация данных
-    useEffect(() => {
-        if (paginationSize === 0) {
-            setDisplayData(processedData)
-        } else {
-            const start = paginationPage * paginationSize
-            const end = start + paginationSize
-            setDisplayData(processedData.slice(start, end))
-        }
-    }, [processedData, paginationSize, paginationPage])
-
-    // Сохранение в localStorage
-    useEffect(() => {
+    // Сохраняем filters с задержкой
+    useDebouncedEffect(() => {
         localStorage.setItem(`${tableName}-filters`, JSON.stringify(filters))
-    }, [filters, tableName])
+    }, [filters, tableName], 500)
 
-    useEffect(() => {
+    // Сохраняем sortBy с задержкой
+    useDebouncedEffect(() => {
         localStorage.setItem(`${tableName}-sort-by`, JSON.stringify(sortBy))
-    }, [sortBy, tableName])
+    }, [sortBy, tableName], 500)
+
 
     useEffect(() => {
         localStorage.setItem(`${tableName}-counts`, paginationSize === 0 ? 'all' : paginationSize.toString())
@@ -146,7 +133,7 @@ const DataTable = ({
                     wordBtn={wordBtn}
                     excelBtn={excelBtn}
                     downloadSectionLeftSideContent={downloadSectionLeftSideContent}
-                    tableData={tableData}
+                    tableData={displayData}
                     columns={columns}
                     tableName={tableName}
                     exportCustomColumns={exportCustomColumns}
@@ -156,25 +143,30 @@ const DataTable = ({
             <div className="table">
                 <TableHeader
                     columns={columns}
-                    tableName={tableName}
                     sortBy={sortBy}
                     getSortField={setSortBy}
                     filters={filters}
                     getFilters={setFilters}
                     widths={widths}
+                    headerGroup={headerGroup}
                 />
 
-                {!loading ? (
-                    <TableBody
+                {loading
+                    ? loadingElement !== null
+                        ? loadingElement
+                        : <TableLoading />
+                    : <TableBody
                         tableData={displayData}
                         columns={columns}
                         scrollable={scrollable}
                         scrollHeight={scrollHeight}
                         widths={widths}
+                        groupBy={groupBy}
+                        collapsedGroups={collapsedGroups}
+                        toggleGroup={toggleGroup}
+                        isTitles={isTitles}
                     />
-                ) : (
-                    <TableLoading />
-                )}
+                }
 
                 {isFooter && (
                     <TableFooter
