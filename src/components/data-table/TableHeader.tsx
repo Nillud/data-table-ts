@@ -9,12 +9,13 @@ type Props = {
   getSortField: (element: localStorageSort) => void
   getFilters: (element: localStorageData) => void
   filters: localStorageData
+  widths?: string
   [key: string]: unknown
 }
 
-const Header = ({ columns, tableName, getSortField, getFilters, filters }: Props) => {
+const Header = ({ columns, tableName, getSortField, getFilters, filters, widths }: Props) => {
   return (
-    <div className={"table-columns"} style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(100px, 1fr))` }}>
+    <div className={"table-columns"} style={{ gridTemplateColumns: widths }}>
       {typeof columns !== 'undefined'
         ? columns.map((column, id) => (
           <Column key={`column-${id}`} column={column} tableName={tableName} getSortField={getSortField} getFilters={getFilters} filters={filters} />

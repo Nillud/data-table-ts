@@ -6,6 +6,7 @@ const columns: Array<column> = [
         field: "id",
         title: "ID",
         autoinc: true,
+        width: 50
     },
     {
         field: "name",
@@ -40,7 +41,7 @@ const columns: Array<column> = [
             return (
                 <div className={'row-item'} >
                     <div className={'actions'}>
-                        <button className={'btn btn-edit'}> Изменить </button>
+                        <button className={'btn btn-edit'} title="Редактировать"> <PenEdit /> </button>
                         <button className={'btn btn-delete'}> Удалить </button>
                     </div>
                 </div>
@@ -163,7 +164,13 @@ const data: tableData = [
         email: 'anna@example.com',
         status: 'Неактивен',
         date: '05.03.2019'
-    }
+    },
+    {
+        id: '9012678',
+        name: 'Артем 1324t5341Федоров',
+        status: 'Неак1t4143тивен',
+        date: '03.04.2008'
+    },
 ]
 
 export { columns, data }

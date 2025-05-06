@@ -45,4 +45,8 @@ type localStorageSort = {
     type: 'asc' | 'desc'
 }
 
-export type { tableElement, tableData, column, TableProps, localStorageData, localStorageSort }
+type paginationSize = number
+
+type paginationPage = number
+
+export type { tableElement, tableData, column, TableProps, localStorageData, localStorageSort, paginationSize, paginationPage }

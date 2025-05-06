@@ -6,12 +6,13 @@ type Props = {
     rowId: number
     row: tableElement
     columns: Array<column>
+    widths?: string
     [key: string]: unknown
 }
 
-const Row = ({ rowId, columns, row }: Props) => {
+const Row = ({ rowId, columns, row, widths }: Props) => {
     return (
-        <div className={'table-row'} style={{gridTemplateColumns: `repeat(${columns.length}, minmax(100px, 1fr))`}}>
+        <div className={'table-row'} style={{gridTemplateColumns: widths}}>
             {
                 columns && columns.length !== 0
                 ? columns.map((column, id) => (

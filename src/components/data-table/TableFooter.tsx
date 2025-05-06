@@ -1,115 +1,151 @@
-import React, { EventHandler, MouseEvent, useState } from 'react'
-import { column, tableData, TableProps } from './DataTable.types'
-import NextIcon from './img/NextIcon'
-import LastIcon from './img/LastIcon'
-import PrevIcon from './img/PrevIcon'
-import FirstIcon from './img/FirstIcon'
+import { paginationPage, paginationSize, tableData, TableProps } from './DataTable.types';
+import NextIcon from './img/NextIcon';
+import LastIcon from './img/LastIcon';
+import PrevIcon from './img/PrevIcon';
+import FirstIcon from './img/FirstIcon';
 
 type Props = {
-  tableData: tableData
-  originalData: tableData
-  paginationCounts: TableProps["paginationCounts"]
-  updateTable: () => void
-  sortCounter: number
-  tableName: string
-  sortData: (data: tableData, col: column["field"], type: 'asc' | 'desc') => tableData
-  sortBy: {
-    [key: string]: unknown
-  }
-}
+  tableData: tableData;
+  paginationCounts: TableProps["paginationCounts"];
+  paginationSize: paginationSize;
+  getPaginationSize: (size: paginationSize) => void;
+  paginationPage: paginationPage;
+  getPaginationPage: (page: paginationPage) => void;
+};
 
-const TableFooter = ({ tableData, originalData, paginationCounts, updateTable, sortCounter, tableName, sortData, sortBy }: Props) => {
-  const [counts, setCounts] = useState<number>(1)
-  const [paginatedData, setPaginatedData] = useState<Array<tableData>>([])
-  const [activeBtn, setActiveBtn] = useState<number>(-1)
+const TableFooter = ({
+  tableData,
+  paginationCounts,
+  paginationSize,
+  getPaginationSize,
+  paginationPage,
+  getPaginationPage
+}: Props) => {
+  const totalItems = tableData.length;
+  const totalPages = paginationSize === 0 ? 1 : Math.ceil(totalItems / paginationSize);
 
-  const PaginationNums = () => {
-    const changeActiveBtn = (e: MouseEvent<HTMLButtonElement>) => {
-      const currentBtn = +e.target.dataset.paginationButton
-      
-      setActiveBtn(currentBtn)
+  const handleCountChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    getPaginationSize(Number(e.target.value));
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      getPaginationPage(newPage);
+    }
+  };
+
+  const renderPageNumbers = () => {
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(0, paginationPage - Math.floor(maxVisible / 2));
+    const end = Math.min(totalPages - 1, start + maxVisible - 1);
+
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(0, end - maxVisible + 1);
     }
 
-    return (
-      <div className={'buttons-num'}>
-        {
-          paginatedData.map((element, id) => (
-            <button
-              key={`pagination-${id}`}
-              disabled={id === activeBtn}
-              className={id === activeBtn ? 'btn-active' : ''}
-              style={((id > (activeBtn == 0 ? activeBtn + 2 : activeBtn + 1)) || (id < activeBtn - 1) && id !== paginatedData.length - 2 && id !== paginatedData.length - 3) ? { display: 'none' } : {}}
-              data-pagination-button={`${id}`}
-              onClick={changeActiveBtn}
-            >
-              {id + 1}
-            </button>
-          ))
-        }
-      </div>
-    )
-  }
-
-  const Pagination = () => {
-    return (
-      <>
-        {
-          paginationCounts
-            ? <div className={'footer-pagination'}>
-              <div className={'pagination-counts'}>
-                <span>Показывать строк: </span>
-                <select name="table-count" id="table-count" value={counts} onChange={(e) => setCounts(+e.target.value)}>
-                  {
-                    paginationCounts && paginationCounts.map(count => (
-                      <option key={`${tableName}-count-${count}`} value={count}>{count == 0 ? 'Все' : count}</option>
-                    ))
-                  }
-                </select>
-              </div>
-
-              <div className={'pagination-buttons'}>
-                <button disabled={activeBtn == 0} onClick={() => setActiveBtn(0)}><FirstIcon /></button>
-                <button disabled={activeBtn == 0} onClick={() => setActiveBtn(activeBtn - 1)}><PrevIcon /></button>
-
-                <PaginationNums />
-
-                <button disabled={activeBtn == paginatedData.length - 1} onClick={() => setActiveBtn(activeBtn + 1)}><NextIcon /></button>
-                <button disabled={activeBtn == paginatedData.length - 1} onClick={() => setActiveBtn(paginatedData.length - 1)}><LastIcon /></button>
-              </div>
-            </div>
-            : null
-        }
-      </>
-    )
-  }
-
-  const TotalRows = () => {
-    if (typeof originalData !== 'undefined') {
-      let numberFrom = (activeBtn * counts) + 1
-      let numberTo = (activeBtn + 1) * counts > originalData.length ? originalData.length : (activeBtn + 1) * counts
-
-      if (counts == 0) {
-        numberFrom = 1
-        numberTo = originalData.length
+    if (start > 0) {
+      pages.push(
+        <button key="page-0" onClick={() => handlePageChange(0)}>
+          1
+        </button>
+      );
+      if (start > 1) {
+        pages.push(<span key="ellipsis-start">...</span>);
       }
-
-      return (
-        <div className={'footer-count'}>
-          <span>Показаны строки с {numberFrom} по {numberTo}, </span>
-          <span>Всего: {originalData.length}</span>
-        </div>
-      )
     }
 
-    return null
-  }
+    for (let i = start; i <= end; i++) {
+      pages.push(
+        <button
+          key={`page-${i}`}
+          className={i === paginationPage ? 'btn-active' : ''}
+          onClick={() => handlePageChange(i)}
+          disabled={i === paginationPage}
+        >
+          {i + 1}
+        </button>
+      );
+    }
+
+    if (end < totalPages - 1) {
+      if (end < totalPages - 2) {
+        pages.push(<span key="ellipsis-end">...</span>);
+      }
+      pages.push(
+        <button key={`page-${totalPages - 1}`} onClick={() => handlePageChange(totalPages - 1)}>
+          {totalPages}
+        </button>
+      );
+    }
+
+    return pages;
+  };
+
+  const firstItem = paginationSize === 0 ? 1 : paginationPage * paginationSize + 1;
+  const lastItem = paginationSize === 0 ? totalItems : Math.min((paginationPage + 1) * paginationSize, totalItems);
+
+  if (totalItems === 0) return null;
 
   return (
-    <div className='table-footer'>
-      <TotalRows />
-      <Pagination />
-    </div>
-  )
-}
+    <div className="table-footer">
+      <div className="footer-count">
+        <span>Показаны строки с {firstItem} по {lastItem}, </span>
+        <span>Всего: {totalItems}</span>
+      </div>
 
-export default TableFooter
+      {paginationCounts && (
+        <div className="footer-pagination">
+          <div className="pagination-counts">
+            <span>Показывать строк: </span>
+            <select value={paginationSize} onChange={handleCountChange}>
+              {paginationCounts.map(count => (
+                <option key={`count-${count}`} value={count}>
+                  {count === 0 ? 'Все' : count}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="pagination-buttons">
+            <button
+              disabled={paginationPage === 0}
+              onClick={() => handlePageChange(0)}
+              aria-label="Первая страница"
+            >
+              <FirstIcon />
+            </button>
+            <button
+              disabled={paginationPage === 0}
+              onClick={() => handlePageChange(paginationPage - 1)}
+              aria-label="Предыдущая страница"
+            >
+              <PrevIcon />
+            </button>
+
+            <div className="buttons-num">{renderPageNumbers()}</div>
+
+            <button
+              disabled={paginationPage >= totalPages - 1}
+              onClick={() => handlePageChange(paginationPage + 1)}
+              aria-label="Следующая страница"
+            >
+              <NextIcon />
+            </button>
+            <button
+              disabled={paginationPage >= totalPages - 1}
+              onClick={() => handlePageChange(totalPages - 1)}
+              aria-label="Последняя страница"
+            >
+              <LastIcon />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TableFooter;

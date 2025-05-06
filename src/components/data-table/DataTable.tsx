@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { localStorageData, localStorageSort, tableData, TableProps } from './DataTable.types'
+import { useEffect, useState, useCallback } from 'react'
+import { localStorageData, localStorageSort, paginationPage, paginationSize, tableData, TableProps } from './DataTable.types'
 import TableHeader from './TableHeader'
 import TableBody from './TableBody'
 import TableFooter from './TableFooter'
@@ -21,9 +21,15 @@ const DataTable = ({
     wordBtn = false,
     downloadSectionLeftSideContent = null
 }: TableProps) => {
-    const [currentData, setCurrentData] = useState<tableData>([])
+    const [processedData, setProcessedData] = useState<tableData>([])
+    const [displayData, setDisplayData] = useState<tableData>([])
+    const [widths, setWidths] = useState<string>('1fr')
+
     const [filters, setFilters] = useState<localStorageData>({})
     const [sortBy, setSortBy] = useState<localStorageSort>({ col: '', type: 'asc' })
+
+    const [paginationSize, setPaginationSize] = useState<paginationSize>(paginationCounts?.[0] || 10)
+    const [paginationPage, setPaginationPage] = useState<paginationPage>(0)
 
     useEffect(() => {
         const loadFromLocalStorage = () => {
@@ -37,97 +43,106 @@ const DataTable = ({
                 if (localFilters) {
                     setFilters(JSON.parse(localFilters))
                 }
+
+                const localCounts = localStorage.getItem(`${tableName}-counts`)
+                if (localCounts) {
+                    setPaginationSize(localCounts === 'all' ? 0 : Number(localCounts))
+                }
+
+                const localPage = localStorage.getItem(`${tableName}-page`)
+                if (localPage) {
+                    setPaginationPage(Number(localPage))
+                }
             } catch (error) {
                 console.error('Error parsing localStorage data:', error)
-
-                setSortBy({ col: '', type: 'asc' })
-                setFilters({})
+                resetToDefaults()
             }
+        }
+
+        const resetToDefaults = () => {
+            setSortBy({ col: '', type: 'asc' })
+            setFilters({})
+            setPaginationSize(paginationCounts?.[0] || 10)
+            setPaginationPage(0)
         }
 
         loadFromLocalStorage()
-        setCurrentData(tableData)
-    }, [])
+    }, [tableName])
 
+    // Расчет ширины колонок
     useEffect(() => {
-        setCurrentData(tableData)
-    }, [tableData])
+        if (columns?.length) {
+            setWidths(columns.map(c => c.width ? `${c.width}px` : '1fr').join(' '))
+        }
+    }, [columns])
 
+    // Обработка данных (фильтрация и сортировка)
+    const processData = useCallback(() => {
+        let result = [...tableData]
 
-    // useEffect(() => {
-    //     setCurrentData(prevData => {
-    //         return sortData(prevData, String(sortBy.col), sortBy.type)
-    //     })
-    // }, [sortBy])\
+        // Применяем фильтрацию
+        if (filters) {
+            for (const filter in filters) {
+                const currentColumn = columns.find(col => col.field === filter)
+                const filterValue = String(filters[filter])
 
-    // useEffect(() => {
-    //     if (filters !== null) {
-    //         setCurrentData(prevData => {
-    //             let result = [...tableData]
+                if (filterValue === '') continue
 
-    //             for (const filter in filters) {
-    //                 const currentColumn = columns.find(col => col.field === filter)
-    //                 const value = String(filters[filter])
-
-    //                 if (currentColumn?.headerFilter) {
-    //                     result = result.filter(element =>
-    //                         currentColumn.headerFilter!(value, String(element[filter])))
-    //                 } else {
-    //                     result = filterData(result, filter, value)
-    //                 }
-    //             }
-
-    //             return result;
-    //         });
-
-    //         localStorage.setItem(`${tableName}-filters`, JSON.stringify(filters))
-    //     }
-    // }, [filters])
-
-
-    useEffect(() => {
-        if (filters !== null) {
-            setCurrentData(prevData => {
-                let result = [...tableData]
-                // let result = [...prevData]
-
-                // if (filters) {
-                //     result = [...tableData]
-                // }
-
-                if (filters) {
-                    for (const filter in filters) {
-                        const currentColumn = columns.find(col => col.field === filter);
-                        const filterValue = String(filters[filter]);
-
-                        if (filterValue === '') continue;
-
-                        if (currentColumn?.headerFilter) {
-                            result = result.filter(element => currentColumn.headerFilter!(filterValue, String(element[filter])))
-                        } else {
-                            result = filterData(result, filter, String(filters[filter]))
-                        }
-                    }
+                if (currentColumn?.headerFilter) {
+                    result = result.filter(element => currentColumn.headerFilter!(filterValue, String(element[filter])))
+                } else {
+                    result = filterData(result, filter, filterValue)
                 }
-
-                if (sortBy.col) {
-                    result = sortData(result, sortBy.col, sortBy.type);
-                }
-
-                return result;
-            });
-
-            if (filters !== null) {
-                localStorage.setItem(`${tableName}-filters`, JSON.stringify(filters));
             }
         }
-    }, [filters, sortBy])
+
+        // Применяем сортировку
+        if (sortBy.col) {
+            result = sortData(result, sortBy.col, sortBy.type)
+        }
+
+        return result
+    }, [tableData, filters, sortBy, columns])
+
+    // Обновление processedData при изменении фильтров/сортировки
+    useEffect(() => {
+        setProcessedData(processData())
+        // Сбрасываем на первую страницу при изменении фильтров/сортировки
+        setPaginationPage(0)
+    }, [processData])
+
+    // Пагинация данных
+    useEffect(() => {
+        if (paginationSize === 0) {
+            setDisplayData(processedData)
+        } else {
+            const start = paginationPage * paginationSize
+            const end = start + paginationSize
+            setDisplayData(processedData.slice(start, end))
+        }
+    }, [processedData, paginationSize, paginationPage])
+
+    // Сохранение в localStorage
+    useEffect(() => {
+        localStorage.setItem(`${tableName}-filters`, JSON.stringify(filters))
+    }, [filters, tableName])
+
+    useEffect(() => {
+        localStorage.setItem(`${tableName}-sort-by`, JSON.stringify(sortBy))
+    }, [sortBy, tableName])
+
+    useEffect(() => {
+        localStorage.setItem(`${tableName}-counts`, paginationSize === 0 ? 'all' : paginationSize.toString())
+    }, [paginationSize, tableName])
+
+    useEffect(() => {
+        localStorage.setItem(`${tableName}-page`, paginationPage.toString())
+    }, [paginationPage, tableName])
 
     return (
-        <div className={"table-container"}>
-            {
-                wordBtn || excelBtn
-                && <ExportSection
+        <div className="table-container">
+            {(wordBtn || excelBtn) && (
+                <ExportSection
                     wordBtn={wordBtn}
                     excelBtn={excelBtn}
                     downloadSectionLeftSideContent={downloadSectionLeftSideContent}
@@ -136,42 +151,41 @@ const DataTable = ({
                     tableName={tableName}
                     exportCustomColumns={exportCustomColumns}
                 />
-            }
+            )}
 
-            <div className={"table"}>
+            <div className="table">
                 <TableHeader
                     columns={columns}
                     tableName={tableName}
                     sortBy={sortBy}
-                    getSortField={(val: localStorageSort) => setSortBy(val)}
+                    getSortField={setSortBy}
                     filters={filters}
-                    getFilters={(value: localStorageData) => setFilters(value)}
+                    getFilters={setFilters}
+                    widths={widths}
                 />
 
-                {
-                    !loading
-                        ? <TableBody
-                            tableData={currentData}
-                            columns={columns}
-                            scrollable={scrollable}
-                            scrollHeight={scrollHeight}
-                        />
-                        : <TableLoading />
-                }
-
-                {
-                    isFooter
-                    && <TableFooter
-                        paginationCounts={paginationCounts}
-                        tableData={currentData}
-                        originalData={currentData}
-                        updateTable={() => { }}
-                        sortCounter={0}
-                        tableName={tableName}
-                        sortData={sortData}
-                        sortBy={{}}
+                {!loading ? (
+                    <TableBody
+                        tableData={displayData}
+                        columns={columns}
+                        scrollable={scrollable}
+                        scrollHeight={scrollHeight}
+                        widths={widths}
                     />
-                }
+                ) : (
+                    <TableLoading />
+                )}
+
+                {isFooter && (
+                    <TableFooter
+                        paginationCounts={paginationCounts}
+                        tableData={processedData} // Передаем все отфильтрованные данные
+                        paginationSize={paginationSize}
+                        getPaginationSize={setPaginationSize}
+                        paginationPage={paginationPage}
+                        getPaginationPage={setPaginationPage}
+                    />
+                )}
             </div>
         </div>
     )

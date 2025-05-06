@@ -1,23 +1,50 @@
 'use client'
 
+// import { fetchTasks } from "@/app/actions/fetchTasks";
 import DataTable from "@/components/data-table/DataTable";
-import { tableData as TableData } from "@/components/data-table/DataTable.types";
-import { columns, data } from '@/components/data-table/mock'
+import { column, tableData } from "@/components/data-table/DataTable.types";
 import { useEffect, useState } from "react";
+import { columns, data } from "@/components/data-table/mock";
 
 const DataTableMain = () => {
-    const [tableData, setTableData] = useState<TableData>([])
-    const [loading, setLoading] = useState<boolean>(false)
+    const [tableData, setTableData] = useState<tableData>([])
 
+    // const columns: Array<column> = [
+    //     {
+    //         field: 'dr_id',
+    //         title: '№',
+    //         autoinc: true,
+    //         width: 50
+    //     },
+    //     {
+    //         field: "do_name",
+    //         title: "Объект (АЗС)"
+    //     },
+    //     {
+    //         field: "de_name",
+    //         title: "Оборудование"
+    //     },
+    //     {
+    //         field: "dco_name",
+    //         title: "Контрагент"
+    //     },
+    //     {
+    //         field: "dot_name",
+    //         title: "Тип объекта (АЗС)"
+    //     },
+    // ]
 
     useEffect(() => {
-        setLoading(true)
-        setTableData(data)
+        // const getTasks = async () => {
+        //     const newTableData = await fetchTasks()
+        //     setTableData(newTableData)
+        // }
 
-        setTimeout(() => {
-            setLoading(false)
-        }, 1500)
+        setTimeout(async () => {
+            setTableData(data)
+        }, 1000);
     }, [])
+
 
     return (
         <div className="page-container">
@@ -26,9 +53,13 @@ const DataTableMain = () => {
                     tableData={tableData}
                     columns={columns}
                     tableName={"delo-it"}
-                    loading={loading}
+                    // loading={loading}
                     isFooter
                     paginationCounts={[10, 20, 30, 40, 50, 0]}
+                    excelBtn
+                    wordBtn
+                // scrollable
+                // scrollHeight={250}
                 />
             </div>
         </div>
